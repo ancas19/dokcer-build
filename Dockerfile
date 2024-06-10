@@ -1,29 +1,30 @@
+#### Estapa 1: Instalar dependencias
 ##FROM --platform=linux/amd64 node:19.2-alpine3.16
-FROM   node:19.2-alpine3.16
-
-
-# /app
-## cd app
+FROM   node:19.2-alpine3.16 as dependencies
 WORKDIR /app
-
-#Copy package.json
 COPY package*.json ./
-
-## Install app dependencies
 RUN npm install
 
-#Dest /app
+
+## Estapa 2: Compilación y pruebas
+FROM   node:19.2-alpine3.16 as builder
+WORKDIR /app
+COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-#Run tests
 RUN npm run test
 
-## Remove test
-RUN rm -rf ./test && rm -rf  node_modules
 
-## Install production dependencies
+#### Estapa 3: Instalar dependencias de producción
+FROM   node:19.2-alpine3.16 as prod_dependencies
+WORKDIR /app
+COPY package.json ./
 RUN npm install --prod
 
-#Command to start app
+
+## Estapa 4: Ejecutar la app
+FROM   node:19.2-alpine3.16 as prod
+WORKDIR /app
+COPY  --from=prod_dependencies /app/node_modules ./node_modules
+COPY  app.js  ./
+COPY  tasks/  ./tasks
 CMD [ "node","app.js" ]
-
-
